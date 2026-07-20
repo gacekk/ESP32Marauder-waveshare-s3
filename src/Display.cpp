@@ -214,6 +214,24 @@ void Display::RunSetup() {
   
   tft.init();
 
+  #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
+    // Safety net for the Waveshare ESP32-S3 Touch LCD 2:
+    //   Marauder's Display::init() (above) only turns on backlight under
+    //   HAS_DUAL_BAND, and RunSetup() here calls tft.init() directly so
+    //   even that path is skipped.  The .ino setup() does call
+    //   backlightOn() at line 327, but only AFTER brightnessInit() at
+    //   line 310 runs BL_SETUP() + Preferences::begin("backlight") +
+    //   BL_SET(255) and then backlightOff() at 311 drives it back to 0.
+    //   If anything in that dance fails silently (fresh NVS, LEDC busy,
+    //   etc.) the panel stays dark.  Pin TFT_BL HIGH here so the panel
+    //   is visible the moment the SPI bus is up, regardless of what
+    //   happens to brightnessInit() / backlightOn() later.
+    //
+    //   Pin is already OUTPUT (set in .ino setup() at the pinMode call
+    //   before RunSetup is invoked), so a plain digitalWrite is enough.
+    digitalWrite(TFT_BL, HIGH);
+  #endif
+
   tft.setRotation(SCREEN_ORIENTATION);
 
   tft.setCursor(0, 0);
