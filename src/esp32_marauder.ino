@@ -240,8 +240,22 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+  #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
+    // USB-Serial/JTAG mode on S3 occasionally raises Serial "ready"
+    // late or never on some hosts — the unbounded upstream wait would
+    // brick the whole boot (no backlight, no screen, no telemetry).
+    // Bounded wait: give USB CDC 3s to enumerate, then continue so
+    // the rest of setup (backlight, panel, NVS) still runs.
+    {
+      unsigned long _wait_serial_t0 = millis();
+      while (!Serial && millis() - _wait_serial_t0 < 3000) {
+        delay(10);
+      }
+    }
+  #else
+    while(!Serial)
+      delay(10);
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
