@@ -577,7 +577,19 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN // 240x320 — not a mini screen
-    //#define HAS_SD         // TF card slot exists but pinout not yet mapped; uncomment after wiring
+    // SD card: the Waveshare board has a TF slot on the back, but the
+    // exact pinout is not yet wired up in User_Setup_*.h.  We still
+    // define HAS_SD so the global SDInterface sd_obj is instantiated
+    // — upstream Marauder references it UNCONDITIONALLY in
+    // CommandLine.cpp / MenuFunctions.cpp / EvilPortal.cpp without an
+    // #ifdef HAS_SD guard around the references, so without HAS_SD the
+    // linker reports "undefined reference to sd_obj".
+    //
+    // SD_CS = -1 makes SD.begin() fail gracefully at runtime; sd_obj
+    // .supported will stay false and every sd_obj.* call site short
+    // -circuits via the existing `if (sd_obj.supported)` checks.
+    #define HAS_SD
+    #define SD_CS -1
     //#define USE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
