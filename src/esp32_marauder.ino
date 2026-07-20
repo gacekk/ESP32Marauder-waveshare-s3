@@ -224,30 +224,38 @@ void setup()
 {
   #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
     // ============================================================
-    // EMERGENCY SPLASH v2 — diagnostic step markers via Serial
-    // monitor so we can tell exactly which subsystem is alive
-    // even when the panel is completely dark:
-    //   S1: USB CDC serial up
-    //   S2: backlight enabled (LEDC PWM at 44100 Hz, duty 255)
-    //   S3: TFT init done (SPI bus + panel reset OK)
-    //   S4: fillScreen done (panel responds to pixel writes)
-    //   S5: text drawn
-    //   S6: hold ended, returning control to Marauder init
+    // EMERGENCY SPLASH v3 — visual + serial diagnostics.
     //
-    // POC repo (gacekk/esp32-s3-touch-lcd-2) confirmed the panel
-    // backlight is driven by LEDC PWM at 44100 Hz on GPIO1, not
-    // a plain GPIO HIGH.  Previous version used digitalWrite which
-    // is the wrong API for this board.
+    //  1. BL blink 5x.  Old firmware (6fc4afb backlight safety net
+    //     in Display.cpp RunSetup) sets BL to static HIGH via
+    //     digitalWrite.  New firmware uses LEDC PWM and blinks it.
+    //     If BL stays constantly ON after flash, the chip is running
+    //     OLD firmware and a full USB power cycle is required
+    //     (USB-Serial/JTAG's "Hard resetting via RTS pin..." is a
+    //     no-op on Windows).  If BL blinks 5x, new firmware boots.
+    //
+    //  2. Serial step markers S1..S6 around every splash step so
+    //     we can tell which subsystem is alive.  Note: on ESP32-S3
+    //     with ARDUINO_USB_CDC_ON_BOOT=1, Serial is USB CDC which
+    //     enumerates as a DIFFERENT COM port than USB-Serial/JTAG
+    //     (the COM port esptool uses).  Karol should check Windows
+    //     Device Manager -> Ports (COM & LPT) for the CDC port.
     // ============================================================
     Serial.begin(115200);
     Serial.println("S1");
 
-    // POC's backlight settings: PWM 44100 Hz, 8-bit, duty 255.
-    // Use the two-call API (ledcSetup + ledcAttachPin) — framework-
-    // arduinoespressif32 3.20017 does NOT declare ledcAttach().
+    // LEDC PWM backlight (POC: 44100 Hz, 8-bit, channel 7)
     const uint8_t bl_channel = 7;
     ledcSetup(bl_channel, 44100, 8);
     ledcAttachPin(TFT_BL, bl_channel);
+
+    // Blink BL 5 times — proof that new firmware is running.
+    for (int i = 0; i < 5; i++) {
+      ledcWrite(TFT_BL, 255);
+      delay(150);
+      ledcWrite(TFT_BL, 0);
+      delay(150);
+    }
     ledcWrite(TFT_BL, 255);
     Serial.println("S2");
 
