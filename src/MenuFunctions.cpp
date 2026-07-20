@@ -4244,7 +4244,7 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* but
 
   this->menu_start_index = starting_index;
 
-  uint8_t visible_buttons = min(BUTTON_SCREEN_LIMIT, menu->list->size() - starting_index);
+  uint8_t visible_buttons = min((unsigned int)BUTTON_SCREEN_LIMIT, (unsigned int)(menu->list->size() - starting_index));
 
   for (uint8_t i = 0; i < visible_buttons; i++) {
     MenuNode node = menu->list->get(starting_index + i);
@@ -4315,7 +4315,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       display_obj.tft.setTextSize(1);
     #endif
 
-    for (uint16_t i = start_index; i < min(start_index + BUTTON_SCREEN_LIMIT, current_menu->list->size()); i++)
+    for (uint16_t i = start_index; i < min((unsigned int)(start_index + BUTTON_SCREEN_LIMIT), (unsigned int)current_menu->list->size()); i++)
     {
       if (!current_menu || !current_menu->list || i >= current_menu->list->size())
         continue;

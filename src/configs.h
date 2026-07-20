@@ -2406,6 +2406,28 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
+  #if defined(MARAUDER_WAVESHARE_TOUCH_LCD_2)
+    // Waveshare ESP32-S3 Touch LCD 2 (240x320 ST7789T3).
+    // Same keypad geometry as V8 (also 240 wide); CYD_3_5_INCH uses
+    // KEY_X=160 because it's 320 wide.
+    #define BANNER_TIME 100
+
+    #define COMMAND_PREFIX "!"
+
+    // Keypad start position, key sizes and spacing
+    #define KEY_X 120 // Centre of key (240/2)
+    #define KEY_Y 50
+    #define KEY_W 240 // Width and height
+    #define KEY_H 22
+    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1   // Font size multiplier
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+    //#define BUTTON_ARRAY_LEN 5
+  #endif
+
   #if defined(MARAUDER_CYD_GUITION)
     #define BANNER_TIME 100
     

@@ -3211,9 +3211,11 @@ String WiFiScan::security_int_to_string(int security_type) {
       break;
 
     #ifdef HAS_IDF_3
+    #if defined(WIFI_AUTH_WPA3_ENTERPRISE)
     case WIFI_AUTH_WPA3_ENTERPRISE:
       authtype = "[WPA3]";
       break;
+    #endif
     #endif
     case WIFI_AUTH_WPA2_WPA3_PSK:
       authtype = "[WPA2_WPA3_PSK]";
@@ -10844,7 +10846,11 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     String sidecarPath = filePath + "." + service;
     File f = SD.open(sidecarPath, FILE_WRITE);
     if (f) {
+      #ifdef HAS_GPS
       f.println("uploaded=" + gps_obj.getDatetime());
+      #else
+      f.println("uploaded=" + String(millis()));
+      #endif
       f.close();
       Serial.println("[UPLOAD] Sidecar written: " + sidecarPath);
     } else {
