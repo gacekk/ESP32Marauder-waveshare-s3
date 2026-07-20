@@ -224,24 +224,39 @@ void setup()
 {
   #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
     // ============================================================
-    // EMERGENCY SPLASH — runs before ANY other init so we can tell
-    // which subsystem is alive on this hardware.  No Marauder code,
-    // no Preferences, no I2C touch probe, no PSRAM touch — just:
-    //   * backlight pin forced HIGH
-    //   * TFT init with our ST7789 pin config (via build_flags)
-    //   * red screen + 3 lines of white text
+    // EMERGENCY SPLASH v2 — diagnostic step markers via Serial
+    // monitor so we can tell exactly which subsystem is alive
+    // even when the panel is completely dark:
+    //   S1: USB CDC serial up
+    //   S2: backlight enabled (LEDC PWM at 44100 Hz, duty 255)
+    //   S3: TFT init done (SPI bus + panel reset OK)
+    //   S4: fillScreen done (panel responds to pixel writes)
+    //   S5: text drawn
+    //   S6: hold ended, returning control to Marauder init
     //
-    // If you see the red splash → chip+panel+BL+SPI alive, the
-    // problem is in Marauder init (after this block returns).
-    //
-    // If the screen stays black → board, panel, BL pin, or SPI is
-    // mis-wired / dead.
+    // POC repo (gacekk/esp32-s3-touch-lcd-2) confirmed the panel
+    // backlight is driven by LEDC PWM at 44100 Hz on GPIO1, not
+    // a plain GPIO HIGH.  Previous version used digitalWrite which
+    // is the wrong API for this board.
     // ============================================================
-    pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH);
-    delay(50);
+    Serial.begin(115200);
+    Serial.println("S1");
+
+    // POC's backlight settings: PWM 44100 Hz, 8-bit, duty 255.
+    // Use the two-call API (ledcSetup + ledcAttachPin) — framework-
+    // arduinoespressif32 3.20017 does NOT declare ledcAttach().
+    const uint8_t bl_channel = 7;
+    ledcSetup(bl_channel, 44100, 8);
+    ledcAttachPin(TFT_BL, bl_channel);
+    ledcWrite(TFT_BL, 255);
+    Serial.println("S2");
+
     display_obj.tft.init();
+    Serial.println("S3");
+
     display_obj.tft.fillScreen(TFT_RED);
+    Serial.println("S4");
+
     display_obj.tft.setTextColor(TFT_WHITE, TFT_RED);
     display_obj.tft.setTextSize(2);
     display_obj.tft.setCursor(10, 20);
@@ -250,9 +265,10 @@ void setup()
     display_obj.tft.println(F("vF76A186+DIAG"));
     display_obj.tft.setCursor(10, 100);
     display_obj.tft.println(F("CHIP ALIVE"));
-    // Hold splash so a human can see it before Marauder code
-    // potentially paints over it.
-    delay(1500);
+    Serial.println("S5");
+
+    delay(2000);
+    Serial.println("S6");
   #endif
 
   randomSeed(esp_random());
