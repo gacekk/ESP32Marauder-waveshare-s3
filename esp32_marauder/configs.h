@@ -33,6 +33,7 @@
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
+  //#define MARAUDER_WAVESHARE_TOUCH_LCD_2 // Waveshare ESP32-S3 Touch LCD 2 (ST7789T3 240x320 + CST816D)
   //#define MARAUDER_PANCAKE
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
@@ -106,6 +107,8 @@
     #define HARDWARE_NAME "Marauder v8"
   #elif defined(MARAUDER_PANCAKE)
     #define HARDWARE_NAME "Pancake Marauder V8"
+  #elif defined(MARAUDER_WAVESHARE_TOUCH_LCD_2)
+    #define HARDWARE_NAME "Waveshare ESP32-S3 Touch LCD 2"
   #elif defined(MARAUDER_MINI_V3)
     #define HARDWARE_NAME "Marauder Mini v3"
   #elif defined(DUAL_MINI_C5)
@@ -559,6 +562,30 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH  // CST816D via modified ft6336.h (auto-detects FT6336 vs CST816D)
+    //#define HAS_FLIPPER_LED
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY     // No battery ADC pin mapped yet
+    #define HAS_BT          // ESP32-S3 has BLE 5.0
+    //#define HAS_BUTTONS     // No physical nav buttons; touch UI only
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN // 240x320 — not a mini screen
+    //#define HAS_SD         // TF card slot exists but pinout not yet mapped; uncomment after wiring
+    //#define USE_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+    //#define HAS_C5_SD
+    #define HAS_PSRAM       // 8 MB OPI PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3       // ESP32-S3 requires Arduino-ESP32 v3.x (ESP-IDF >= 5.x)
+    //#define HAS_DUAL_BAND  // ESP32-S3 is 2.4 GHz only
     #define HAS_DIRECT_UPLOAD
   #endif
 
@@ -1550,8 +1577,96 @@
       #define GREENBUTTON_H FRAME_H
     
       #define STATUSBAR_COLOR 0x4A49
-    
+
       #define KIT_LED_BUILTIN 13
+    #endif
+
+    #if defined(MARAUDER_WAVESHARE_TOUCH_LCD_2)
+      #define CHAN_PER_PAGE 7
+
+      #define SCREEN_CHAR_WIDTH 40
+      // NOTE: do NOT define HAS_ILI9341 here — this board uses HAS_CAP_TOUCH
+      // (CST816D I2C), not the TFT_eSPI XPT2046 touch path gated by HAS_ILI9341.
+      #define HAS_ST7789
+
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      // Capacitive touch I2C pins (consumed by esp32_marauder/ft6336.h)
+      // CST816D is on the shared I2C bus; no reset pin routed to MCU.
+      #define CTP_SDA  48
+      #define CTP_SCL  47
+      #define CTP_RST  -1
+
+      // Display SPI pins (mirrored from User_Setup_waveshare_esp32_s3_touch_lcd_2.h
+      // for in-code reference — the User_Setup file is the canonical source).
+      #define TFT_MOSI  38
+      #define TFT_SCLK  39
+      #define TFT_CS    45
+      #define TFT_DC    42
+      #define TFT_RST   -1   // Hard-wired to board reset
+      #define TFT_BL    1    // LEDC PWM backlight
+
+      // No SPI resistive touch on this board (touch is I2C).
+      #define TOUCH_CS  -1
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+
+      #define EXT_BUTTON_WIDTH 30
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 21
+
+      #define SCREEN_ORIENTATION 0
+
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_HEIGHT
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320 // Bottom of screen area
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define STATUSBAR_COLOR 0x4A49
+
+      // No status-LED on this board. Leave KIT_LED_BUILTIN undefined so the
+      // KIT_LED_BUILTIN branch in Display::RunSetup() is skipped.
+      //#define KIT_LED_BUILTIN 13
     #endif
 
     #if defined(MARAUDER_CYD_3_5_INCH)
