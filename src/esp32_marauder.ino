@@ -222,6 +222,39 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
+  #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
+    // ============================================================
+    // EMERGENCY SPLASH — runs before ANY other init so we can tell
+    // which subsystem is alive on this hardware.  No Marauder code,
+    // no Preferences, no I2C touch probe, no PSRAM touch — just:
+    //   * backlight pin forced HIGH
+    //   * TFT init with our ST7789 pin config (via build_flags)
+    //   * red screen + 3 lines of white text
+    //
+    // If you see the red splash → chip+panel+BL+SPI alive, the
+    // problem is in Marauder init (after this block returns).
+    //
+    // If the screen stays black → board, panel, BL pin, or SPI is
+    // mis-wired / dead.
+    // ============================================================
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+    delay(50);
+    display_obj.tft.init();
+    display_obj.tft.fillScreen(TFT_RED);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_RED);
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setCursor(10, 20);
+    display_obj.tft.println(F("BOOT OK"));
+    display_obj.tft.setCursor(10, 60);
+    display_obj.tft.println(F("vF76A186+DIAG"));
+    display_obj.tft.setCursor(10, 100);
+    display_obj.tft.println(F("CHIP ALIVE"));
+    // Hold splash so a human can see it before Marauder code
+    // potentially paints over it.
+    delay(1500);
+  #endif
+
   randomSeed(esp_random());
   
   #ifndef DEVELOPER
