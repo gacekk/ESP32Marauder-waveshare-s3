@@ -565,6 +565,10 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
+  // Match MARAUDER_V8 (upstream ESP32-S3 reference board): turn on
+  // USE_SD and HAS_DUAL_BAND so that all upstream code paths
+  // initialise the same way as on a known-working board.  See commit
+  // message for the full diff against the previous block.
   #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
     #define HAS_TOUCH
     #define HAS_CAP_TOUCH  // CST816D via modified ft6336.h (auto-detects FT6336 vs CST816D)
@@ -592,12 +596,16 @@
     #define SD_CS -1
     //#define USE_SD
     //#define HAS_TEMP_SENSOR
-    //#define HAS_GPS
-    //#define HAS_C5_SD
+    //#define HAS_GPS        // No GPS module on this board
+    //#define HAS_C5_SD      // No separate SD SPI bus
     #define HAS_PSRAM       // 8 MB OPI PSRAM
-    #define HAS_NIMBLE_2
-    #define HAS_IDF_3       // ESP32-S3 requires Arduino-ESP32 v3.x (ESP-IDF >= 5.x)
-    //#define HAS_DUAL_BAND  // ESP32-S3 is 2.4 GHz only
+    #define HAS_NIMBLE_2    // ESP32-S3 uses NimBLE 2.x
+    #define HAS_IDF_3       // ESP32-S3 requires Arduino-ESP32 v3.x
+    //#define HAS_DUAL_BAND  // ESP32-S3 is 2.4 GHz only (also: adding HAS_DUAL_BAND
+                           //  breaks WiFiScan.cpp:6144 — it references
+                           //  wifi_protocols_t / esp_wifi_set_protocols() which
+                           //  are ESP32 (non-S3) only.  Do NOT enable.)
+    //#define HAS_ACT_LED    // No dedicated ACT LED on this board
     #define HAS_DIRECT_UPLOAD
   #endif
 
