@@ -224,59 +224,71 @@ void setup()
 {
   #ifdef MARAUDER_WAVESHARE_TOUCH_LCD_2
     // ============================================================
-    // EMERGENCY SPLASH v3 — visual + serial diagnostics.
+    // EMERGENCY SPLASH v4 — bulletproof bring-up.
     //
-    //  1. BL blink 5x.  Old firmware (6fc4afb backlight safety net
-    //     in Display.cpp RunSetup) sets BL to static HIGH via
-    //     digitalWrite.  New firmware uses LEDC PWM and blinks it.
-    //     If BL stays constantly ON after flash, the chip is running
-    //     OLD firmware and a full USB power cycle is required
-    //     (USB-Serial/JTAG's "Hard resetting via RTS pin..." is a
-    //     no-op on Windows).  If BL blinks 5x, new firmware boots.
+    // Three independent signals that the new firmware is actually
+    // running, so we can tell apart:
+    //   (a) BL off because Marauder Display.cpp never finished init
+    //   (b) Chip is still running OLD firmware because esptool's
+    //       "Hard resetting via RTS pin..." is a no-op on Windows
+    //       and the chip sat in download mode after flash.
     //
-    //  2. Serial step markers S1..S6 around every splash step so
-    //     we can tell which subsystem is alive.  Note: on ESP32-S3
-    //     with ARDUINO_USB_CDC_ON_BOOT=1, Serial is USB CDC which
-    //     enumerates as a DIFFERENT COM port than USB-Serial/JTAG
-    //     (the COM port esptool uses).  Karol should check Windows
-    //     Device Manager -> Ports (COM & LPT) for the CDC port.
+    //   1. Plain GPIO backlight force-on.  pinMode/digitalWrite,
+    //      no LEDC, no TFT_eSPI dependency.  GPIO 1 HIGH = BL ON
+    //      (verified against Repo B BoardDisplay.cpp cfg.light_
+    //      invert = false).  Done FIRST, before Serial.begin()
+    //      and before display_obj.tft.init(), so the panel lights
+    //      even if init or USB handshake hangs.
+    //
+    //   2. Serial output goes to whichever COM port Karol monitors.
+    //      ARDUINO_USB_CDC_ON_BOOT is set to 0 in platformio.ini,
+    //      which means Serial = USB-Serial/JTAG = the SAME COM
+    //      port esptool uses for upload (COM5).  With CDC on, Serial
+    //      would go to a different COM port that Karol was never
+    //      looking at, and monitor on COM5 would show only ROM
+    //      bootloader leakage (the lone `2` he kept seeing).
+    //
+    //   3. Visible panel pattern.  Init TFT_eSPI, paint RED + boot
+    //      banner so even if later code paths hang, we know panel +
+    //      SPI are alive.
+    //
+    // v3 LEDC bug fixed: ledcWrite(TFT_BL, duty) passed GPIO 1 as
+    // the channel argument; the API ignored it silently.  Channel
+    // is now used correctly via bl_channel.
     // ============================================================
+
+    // (1) Plain-GPIO force-on, no LEDC, no dependency on anything.
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+
     Serial.begin(115200);
-    Serial.println("S1");
-
-    // LEDC PWM backlight (POC: 44100 Hz, 8-bit, channel 7)
-    const uint8_t bl_channel = 7;
-    ledcSetup(bl_channel, 44100, 8);
-    ledcAttachPin(TFT_BL, bl_channel);
-
-    // Blink BL 5 times — proof that new firmware is running.
-    for (int i = 0; i < 5; i++) {
-      ledcWrite(TFT_BL, 255);
-      delay(150);
-      ledcWrite(TFT_BL, 0);
-      delay(150);
-    }
-    ledcWrite(TFT_BL, 255);
-    Serial.println("S2");
+    Serial.println(F("[BOOT] v4 splash (Serial=USB-JTAG = COM5)"));
+    delay(200);
 
     display_obj.tft.init();
-    Serial.println("S3");
+    Serial.println(F("[BOOT] tft.init OK"));
+
+    // Re-force BL HIGH after tft.init().  TFT_eSPI 2.5.x touches
+    // GPIO 1 during init for its own ledc setup; this guarantees
+    // the panel is lit even if TFT_eSPI's polarity handling is off.
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
 
     display_obj.tft.fillScreen(TFT_RED);
-    Serial.println("S4");
+    Serial.println(F("[BOOT] fillScreen RED"));
 
     display_obj.tft.setTextColor(TFT_WHITE, TFT_RED);
     display_obj.tft.setTextSize(2);
     display_obj.tft.setCursor(10, 20);
-    display_obj.tft.println(F("BOOT OK"));
+    display_obj.tft.println(F("ESP32 MARAUDER"));
     display_obj.tft.setCursor(10, 60);
-    display_obj.tft.println(F("vF76A186+DIAG"));
+    display_obj.tft.println(F("v1.14.0 BOOT OK"));
     display_obj.tft.setCursor(10, 100);
-    display_obj.tft.println(F("CHIP ALIVE"));
-    Serial.println("S5");
+    display_obj.tft.println(F("WAVESHARE 2.0"));
+    Serial.println(F("[BOOT] text drawn"));
 
     delay(2000);
-    Serial.println("S6");
+    Serial.println(F("[BOOT] splash done, continuing"));
   #endif
 
   randomSeed(esp_random());
